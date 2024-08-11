@@ -1,0 +1,24 @@
+# Archivos de configuración de Python
+*.pyc
+__pycache__/
+
+# Entornos virtuales
+venv/
+*.venv/
+
+# Archivos de base de datos
+db.sqlite3
+
+# Archivos de configuración del IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Archivos de caché
+*.log
+*.pot
+*.py[cod]
+
+# Archivos secretos
+.env
