@@ -3,6 +3,8 @@ from django.contrib.auth.hashers import make_password, check_password
 
 # Modelo de Usuario
 class Usuario(models.Model):
+    nombre = models.CharField(max_length=150)
+    apellido = models.CharField(max_length=150)
     username = models.CharField(max_length=150, unique=True)
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=128)
@@ -15,7 +17,7 @@ class Usuario(models.Model):
     )
     altura = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)  # En metros
     peso = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)  # En kilogramos
-    condiciones_medicas = models.TextField(null=True, blank=True)
+    obra_social = models.TextField(null=True, blank=True)
     email_verificado = models.BooleanField(default=False)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 

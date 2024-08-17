@@ -21,16 +21,18 @@ def getUsuarios(request):
 @csrf_exempt
 @api_view(['POST'])
 def postCrearUsuario(request):
+    nombre = request.data.get('nombre')
+    apellido = request.data.get('apellido')
     username = request.data.get('username')
     email = request.data.get('email')
     password = request.data.get('password')
     fecha_nacimiento = request.data.get('fecha_nacimiento')
-    genero = request.data.get('genero')
+    genero = request.data.get('genero') 
     altura = request.data.get('altura')
     peso = request.data.get('peso')
-    condiciones_medicas = request.data.get('condiciones_medicas')
+    obra_social = request.data.get('condiciones_medicas')
 
-    if not all([username, email, password]):
+    if not all([username, email, password, nombre, apellido, fecha_nacimiento, genero, altura, peso]):
         return JsonResponse({"error": "Campos vacíos"}, status=400)
 
     if Usuario.objects.filter(email=email).exists():
@@ -38,6 +40,8 @@ def postCrearUsuario(request):
 
     token = uuid.uuid4().hex
     usuario = Usuario(
+        nombre = nombre,
+        apellido = apellido,
         username=username,
         email=email,
         password=password,
@@ -45,18 +49,18 @@ def postCrearUsuario(request):
         genero=genero,
         altura=altura,
         peso=peso,
-        condiciones_medicas=condiciones_medicas
+        obra_social=obra_social
     )
     usuario.save()
 
-    verification_link = request.build_absolute_uri(f'/verificar-email/{token}/')
-    send_mail(
-        'Verifica tu correo electrónico',
-        f'Por favor, verifica tu correo electrónico visitando el siguiente enlace: {verification_link}',
-        settings.EMAIL_HOST_USER,
-        [email],
-        fail_silently=False,
-    )
+    #verification_link = request.build_absolute_uri(f'/verificar-email/{token}/')
+    #send_mail(
+     #   'Verifica tu correo electrónico',
+      #  f'Por favor, verifica tu correo electrónico visitando el siguiente enlace: {verification_link}',
+       # settings.EMAIL_HOST_USER,
+       # [email],
+       # fail_silently=False,
+    #)
 
     return JsonResponse({"message": "Usuario creado con éxito. Por favor, verifica tu correo electrónico."}, status=201)
 
@@ -128,19 +132,19 @@ def getVerificarEmail(request, token):
 @csrf_exempt
 @api_view(['POST'])
 def iniciar_sesion(request):
-    email = request.data.get('email')
+    username = request.data.get('username')
     password = request.data.get('password')
 
-    if not all([email, password]):
-        return JsonResponse({"error": "Correo electrónico y contraseña son requeridos."}, status=400)
+    if not all([username, password]):
+        return JsonResponse({"error": "Username y contraseña son requeridos."}, status=400)
 
     try:
-        usuario = Usuario.objects.get(email=email)
+        usuario = Usuario.objects.get(username=username)
         if usuario.verificar_password(password):
             # Aquí puedes manejar la sesión si usas Django con sesiones.
             return JsonResponse({"message": "Inicio de sesión exitoso."}, status=200)
         else:
-            return JsonResponse({"error": "Correo electrónico o contraseña incorrectos."}, status=401)
+            return JsonResponse({"error": "Username o contraseña incorrectos."}, status=401)
     except Usuario.DoesNotExist:
         return JsonResponse({"error": "Usuario no encontrado."}, status=404)
 
