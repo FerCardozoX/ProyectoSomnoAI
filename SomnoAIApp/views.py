@@ -1,3 +1,5 @@
+import random
+import string
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth.tokens import default_token_generator
@@ -9,6 +11,7 @@ from rest_framework.decorators import api_view
 from django.conf import settings
 import uuid
 from SomnoAIApp.models import Usuario
+from config.gmail_service import send_email
 
 # Obtener todos los usuarios
 @csrf_exempt
@@ -217,3 +220,72 @@ def cambiar_contraseña(request):
         return JsonResponse({"message": "Contraseña actualizada con éxito."}, status=200)
     else:
         return JsonResponse({"error": "Token inválido."}, status=400)
+    
+
+
+@csrf_exempt
+@api_view(['POST'])
+def enviarCodigoVerificacion(request):
+    email = request.data.get('email')
+
+    if not email:
+        return JsonResponse({"error": "El campo de correo electrónico es obligatorio."}, status=400)
+
+    # Generar un código de verificación aleatorio de 6 dígitos
+    codigo_verificacion = ''.join(random.choices(string.digits, k=6))
+
+    # Guardar el código en una variable de sesión
+    request.session['codigo_verificacion'] = codigo_verificacion
+
+    # Enviar el correo con el código de verificación
+    email_body = f'Tu código de verificación es: {codigo_verificacion}'
+    try:
+        send_email(email, 'Código de Verificación', email_body)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"message": "Código de verificación enviado. Por favor, verifica tu correo."}, status=200)
+
+@csrf_exempt
+@api_view(['POST'])
+def verificarCodigoYCrearUsuario(request):
+    codigo_ingresado = request.data.get('codigo')
+    codigo_verificacion = request.session.get('codigo_verificacion')
+
+    if not codigo_ingresado or not codigo_verificacion:
+        return JsonResponse({"error": "Código de verificación no encontrado o no ingresado."}, status=400)
+
+    if codigo_ingresado == codigo_verificacion:
+        # Aquí tomas los demás datos y creas el usuario
+        nombre = request.data.get('nombre')
+        apellido = request.data.get('apellido')
+        username = request.data.get('username')
+        email = request.data.get('email')
+        password = request.data.get('password')
+        fecha_nacimiento = request.data.get('fecha_nacimiento')
+        genero = request.data.get('genero')
+        altura = request.data.get('altura')
+        peso = request.data.get('peso')
+        obra_social = request.data.get('obra_social')
+
+        usuario = Usuario(
+            nombre=nombre,
+            apellido=apellido,
+            username=username,
+            email=email,
+            password=password,
+            fecha_nacimiento=fecha_nacimiento,
+            genero=genero,
+            altura=altura,
+            peso=peso,
+            obra_social=obra_social
+        )
+        usuario.save()
+
+        # Limpiar el código de la sesión
+        del request.session['codigo_verificacion']
+
+        return JsonResponse({"message": "Usuario creado con éxito."}, status=201)
+    else:
+        return JsonResponse({"error": "Código de verificación incorrecto."}, status=400)
+
