@@ -14,6 +14,7 @@ from django.conf import settings
 import uuid
 from SomnoAIApp.models import Usuario
 from config.gmail_service import send_email
+import google.generativeai as genai
 
 # Obtener todos los usuarios
 @csrf_exempt
@@ -291,29 +292,29 @@ def verificarCodigoYCrearUsuario(request):
     else:
         return JsonResponse({"error": "Código de verificación incorrecto."}, status=400)
 
+
+# Configurar la clave de API directamente en el código para la prueba
+genai.configure(api_key="AIzaSyDYlbzeahQKhqf4tStEugOnObjaaOsT-0Y")
+
 @csrf_exempt
 def gemini_chat(request):
     if request.method == 'POST':
         # Obtener el mensaje enviado por el usuario
         data = json.loads(request.body)
         question = data.get('question')
-        parametros = data.get('parametros', {})  # Puedes agregar parámetros de salud como oxígeno, ronquidos, etc.
-
-        # Llamada a la API de Google Gemini
-        url = 'https://api.google.com/path-to-gemini'  # Reemplaza por la URL correcta de Gemini
-        headers = {
-            'Authorization': 'Bearer TU_API_KEY_DE_GOOGLE',
-            'Content-Type': 'application/json',
-        }
-        payload = {
-            'input': question,
-            'parametros': parametros  # Pasar cualquier parámetro adicional
-        }
+        parametros = data.get('parametros', {})
 
         try:
-            response = requests.post(url, headers=headers, json=payload)
-            response_data = response.json()
-            return JsonResponse({'answer': response_data.get('answer')})
+            # Crear el modelo de generación de contenido de Gemini
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            
+            # Realizar la generación de contenido basada en la pregunta del usuario
+            response = model.generate_content(question)
+            
+            # Obtener el texto generado
+            respuesta = response.text
+
+            return JsonResponse({'answer': respuesta})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 
