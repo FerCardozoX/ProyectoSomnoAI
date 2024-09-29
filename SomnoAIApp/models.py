@@ -74,3 +74,10 @@ class Perfil(models.Model):
     usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE)
     bio = models.TextField(null=True, blank=True)
     foto_perfil = models.ImageField(upload_to='perfiles/', null=True, blank=True)
+
+# Historial del Chat
+class HistorialChat(models.Model):
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    pregunta = models.TextField()  # Pregunta hecha por el usuario
+    respuesta = models.TextField()  # Respuesta de Gemini
+    fecha = models.DateTimeField(auto_now_add=True)

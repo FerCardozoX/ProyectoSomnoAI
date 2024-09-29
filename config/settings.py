@@ -116,7 +116,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': dj_database_url.config(
         # Feel free to alter this value to suit your needs.
-        default='postgresql://somnoaisql:dz4HIN7oV6JM4BxPq96rQCXkax2tsOIJ@dpg-cr0hmk23esus73aim63g-a.oregon-postgres.render.com/somnoaisql',
+        default='postgresql://somnoaisql:1awGrw2ZmzMl1tBLkmkDzDiLuMBrRPpQ@dpg-crsr5pd6l47c73d3s6o0-a.oregon-postgres.render.com/somnoaisql_wkzi',
         conn_max_age=600
     )
     

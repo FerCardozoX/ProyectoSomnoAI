@@ -1,3 +1,4 @@
+import json
 import random
 import string
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -7,6 +8,7 @@ from django.core.mail import send_mail
 from django.contrib.auth import authenticate, login
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+import requests
 from rest_framework.decorators import api_view
 from django.conf import settings
 import uuid
@@ -289,3 +291,30 @@ def verificarCodigoYCrearUsuario(request):
     else:
         return JsonResponse({"error": "Código de verificación incorrecto."}, status=400)
 
+@csrf_exempt
+def gemini_chat(request):
+    if request.method == 'POST':
+        # Obtener el mensaje enviado por el usuario
+        data = json.loads(request.body)
+        question = data.get('question')
+        parametros = data.get('parametros', {})  # Puedes agregar parámetros de salud como oxígeno, ronquidos, etc.
+
+        # Llamada a la API de Google Gemini
+        url = 'https://api.google.com/path-to-gemini'  # Reemplaza por la URL correcta de Gemini
+        headers = {
+            'Authorization': 'Bearer TU_API_KEY_DE_GOOGLE',
+            'Content-Type': 'application/json',
+        }
+        payload = {
+            'input': question,
+            'parametros': parametros  # Pasar cualquier parámetro adicional
+        }
+
+        try:
+            response = requests.post(url, headers=headers, json=payload)
+            response_data = response.json()
+            return JsonResponse({'answer': response_data.get('answer')})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
