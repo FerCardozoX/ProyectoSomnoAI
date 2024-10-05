@@ -330,7 +330,7 @@ def predecir(request):
 
     # Ejecutar el método main() de testeo.py
     try:
-        ejecutar_testeo()  # Invoca el procesamiento automático
-        return JsonResponse({"message": "Procesamiento ejecutado exitosamente."}, status=200)
+        resultados = ejecutar_testeo()  # Llamamos al método 'main' de testeo.py
+        return JsonResponse(resultados, status=200)
     except Exception as e:
         return JsonResponse({"error": f"Ocurrió un error al ejecutar el procesamiento: {str(e)}"}, status=500)
