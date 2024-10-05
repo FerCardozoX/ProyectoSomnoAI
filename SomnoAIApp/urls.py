@@ -8,5 +8,5 @@ urlpatterns = [
     path('enviarCodigoVerificacion/', enviarCodigoVerificacion, name='enviar_codigo_verificacion'),
     path('verificarCodigoYCrearUsuario/', verificarCodigoYCrearUsuario, name='verificar_codigo_y_crear_usuario'),
     path('geminiChat/',gemini_chat, name='gemini_chat'),
-    path('predecirApnea/', predecir_apnea, name='predecir_apnea'),
+    path('predecirApnea/', predecir, name='predecir_apnea'),
 ]
