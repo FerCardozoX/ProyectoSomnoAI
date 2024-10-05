@@ -16,6 +16,7 @@ from SomnoAIApp.models import Usuario
 from config.gmail_service import send_email
 import google.generativeai as genai
 from .IA.Testeo import main as ejecutar_testeo
+from .IA.TesteoAudio import main as ejecutar_audio
 
 
 # Obtener todos los usuarios
@@ -332,5 +333,18 @@ def predecir(request):
     try:
         resultados = ejecutar_testeo()  # Llamamos al método 'main' de testeo.py
         return JsonResponse(resultados, status=200)
+    except Exception as e:
+        return JsonResponse({"error": f"Ocurrió un error al ejecutar el procesamiento: {str(e)}"}, status=500)
+
+@csrf_exempt
+@api_view(['POST'])
+def predecirAudio(request):
+    # Aquí podés recibir algún dato del frontend si querés (opcional)
+    parametro_ejemplo = request.data.get('parametro', None)
+
+    # Ejecutar el método main() de testeo.py
+    try:
+        ResultadoAudio = ejecutar_audio()  # Llamamos al método 'main' de testeo.py
+        return JsonResponse(ResultadoAudio, status=200)
     except Exception as e:
         return JsonResponse({"error": f"Ocurrió un error al ejecutar el procesamiento: {str(e)}"}, status=500)
