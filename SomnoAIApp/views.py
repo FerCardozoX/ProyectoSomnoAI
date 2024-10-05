@@ -15,10 +15,8 @@ import uuid
 from SomnoAIApp.models import Usuario
 from config.gmail_service import send_email
 import google.generativeai as genai
-from .IA.Testeo import *
+from .IA.Testeo import main as ejecutar_testeo
 
-# Cargar el modelo entrenado
-modelo = joblib.load('SomnoAIApp/IA/cerebro_apnea.pkl')
 
 # Obtener todos los usuarios
 @csrf_exempt
@@ -324,25 +322,15 @@ def gemini_chat(request):
 
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
-def predecir_apnea(request):
-    if request.method == 'POST':
-        # Procesar los archivos CSV subidos (ajusta los nombres de los archivos)
-        archivo_oxigeno = request.FILES['archivo_oxigeno']
-        archivo_heart_rate = request.FILES['archivo_heart_rate']
-        archivo_respiracion = request.FILES['archivo_respiracion']
+@csrf_exempt
+@api_view(['POST'])
+def predecir(request):
+    # Aquí podés recibir algún dato del frontend si querés (opcional)
+    parametro_ejemplo = request.data.get('parametro', None)
 
-        # Procesar los datos usando las funciones importadas
-        oxigeno = procesar_oxigeno_saturacion(archivo_oxigeno)
-        heart_rate = procesar_heart_rate(archivo_heart_rate)
-        breathing = procesar_breathing(archivo_respiracion)
-
-        # Crear el array para el modelo
-        parametros = np.array([[heart_rate, oxigeno, 0, breathing]])  # Reemplaza "0" con movimientos si los tienes
-
-        # Usar el modelo para hacer la predicción
-        prediccion = modelo.predict(parametros)
-
-        # Retornar el resultado en formato JSON
-        return JsonResponse({'resultado': 'Apnea detectada' if prediccion[0] == 1 else 'No hay apnea'})
-
-    return JsonResponse({'error': 'Método no permitido'}, status=400)
+    # Ejecutar el método main() de testeo.py
+    try:
+        ejecutar_testeo()  # Invoca el procesamiento automático
+        return JsonResponse({"message": "Procesamiento ejecutado exitosamente."}, status=200)
+    except Exception as e:
+        return JsonResponse({"error": f"Ocurrió un error al ejecutar el procesamiento: {str(e)}"}, status=500)
