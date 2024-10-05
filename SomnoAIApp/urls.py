@@ -9,4 +9,5 @@ urlpatterns = [
     path('verificarCodigoYCrearUsuario/', verificarCodigoYCrearUsuario, name='verificar_codigo_y_crear_usuario'),
     path('geminiChat/',gemini_chat, name='gemini_chat'),
     path('predecirApnea/', predecir, name='predecir_apnea'),
+    path('predecirAudio/', predecirAudio, name='predecir_audio'),
 ]
