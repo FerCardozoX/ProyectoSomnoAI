@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import joblib
 import numpy as np
@@ -105,8 +106,10 @@ def main():
     promedio_heart_rate = procesar_heart_rate('com.samsung.shealth.tracker.heart_rate.20240426191109.csv')
     promedio_breathing = procesar_breathing('com.samsung.shealth.breathing.20240426191109.csv')
 
+    ruta_modelo = os.path.join(os.path.dirname(__file__), 'cerebro_apnea.pkl')
+    
     # Cargar el modelo entrenado
-    modelo = joblib.load('cerebro_apnea.pkl')
+    modelo = joblib.load(ruta_modelo)
 
     # Definir los parámetros utilizando los promedios calculados
     movimientos = 0  # Puedes ajustar este valor según tu lógica
