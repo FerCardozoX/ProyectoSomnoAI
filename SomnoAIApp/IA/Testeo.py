@@ -98,13 +98,44 @@ def procesar_breathing(archivo_csv):
     except Exception as e:
         print(f"Error al procesar el archivo: {e}")
         return 0
+    
+
+    # Funciones para evaluar los parámetros
+def evaluar_oxigeno_saturacion(valor):
+    if valor >= 95:
+        return "Saturación de oxígeno normal"
+    elif 90 <= valor < 95:
+        return "Saturación de oxígeno ligeramente baja"
+    else:
+        return "Saturación de oxígeno baja"
+
+def evaluar_heart_rate(valor):
+    if 60 <= valor <= 100:
+        return "Frecuencia cardíaca normal"
+    elif valor < 60:
+        return "Frecuencia cardíaca baja"
+    else:
+        return "Frecuencia cardíaca alta"
+
+def evaluar_breathing(valor):
+    if 12 <= valor <= 20:
+        return "Respiración normal"
+    elif valor < 12:
+        return "Respiración baja"
+    else:
+        return "Respiración alta"
+    
 
 # Función principal para ejecutar el procesamiento y la predicción
 def main():
     # Procesar los archivos CSV
-    promedio_oxigeno = procesar_oxigeno_saturacion('com.samsung.shealth.tracker.oxygen_saturation.20240426191109.csv')
-    promedio_heart_rate = procesar_heart_rate('com.samsung.shealth.tracker.heart_rate.20240426191109.csv')
-    promedio_breathing = procesar_breathing('com.samsung.shealth.breathing.20240426191109.csv')
+    ruta_promedio_oxigeno = os.path.join(os.path.dirname(__file__), 'com.samsung.shealth.tracker.oxygen_saturation.20240426191109.csv')
+    ruta_promedio_heart_rate = os.path.join(os.path.dirname(__file__), 'com.samsung.shealth.tracker.heart_rate.20240426191109.csv')
+    ruta_promedio_breathing = os.path.join(os.path.dirname(__file__), 'com.samsung.shealth.breathing.20240426191109.csv')
+
+    promedio_oxigeno = procesar_oxigeno_saturacion(ruta_promedio_oxigeno)
+    promedio_heart_rate = procesar_heart_rate(ruta_promedio_heart_rate)
+    promedio_breathing = procesar_breathing(ruta_promedio_breathing)
 
     ruta_modelo = os.path.join(os.path.dirname(__file__), 'cerebro_apnea.pkl')
     
@@ -120,12 +151,23 @@ def main():
     # Usar el modelo para predecir si hay apnea o no
     prediccion = modelo.predict(parametros_personales)
 
-    # Mostrar el resultado
-    if prediccion[0] == 1:
-        print("Apnea detectada.")
-    else:
-        print("No hay apnea.")
+    # Resultados de la predicción
+    resultado_apnea = "Apnea detectada" if prediccion[0] == 1 else "No hay apnea"
+    
+    # Evaluar los parámetros
+    evaluacion_oxigeno = evaluar_oxigeno_saturacion(promedio_oxigeno)
+    evaluacion_heart_rate = evaluar_heart_rate(promedio_heart_rate)
+    evaluacion_breathing = evaluar_breathing(promedio_breathing)
 
-# Ejecutar la función principal
-if __name__ == "__main__":
-    main()
+    # Devolver resultados como un diccionario
+    resultados = {
+        "resultado_apnea": resultado_apnea,
+        "promedio_oxigeno": promedio_oxigeno,
+        "evaluacion_oxigeno": evaluacion_oxigeno,
+        "promedio_heart_rate": promedio_heart_rate,
+        "evaluacion_heart_rate": evaluacion_heart_rate,
+        "promedio_breathing": promedio_breathing,
+        "evaluacion_breathing": evaluacion_breathing,
+    }
+    
+    return resultados
