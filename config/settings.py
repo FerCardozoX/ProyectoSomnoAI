@@ -113,14 +113,14 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+
 DATABASES = {
     'default': dj_database_url.config(
-        default='postgresql://somnoaisql:1awGrw2ZmzMl1tBLkmkDzDiLuMBrRPpQ@dpg-crsr5pd6l47c73d3s6o0-a.oregon-postgres.render.com/somnoaisql_wkzi',
+        default='postgresql://somnoaisql:NMF8gqr5YFAiZMzuyXTsmM208z8ZQHdS@dpg-cshrsjrtq21c73ekclt0-a.oregon-postgres.render.com/somnoaisql_615d',
         conn_max_age=600,
-        ssl_require=True  # Habilita SSL si tu base de datos lo requiere
+        ssl_require=True
     )
 }
-
 
 
 # Password validation
