@@ -119,8 +119,8 @@ DATABASES = {
         default='postgresql://somnoaisql:1awGrw2ZmzMl1tBLkmkDzDiLuMBrRPpQ@dpg-crsr5pd6l47c73d3s6o0-a.oregon-postgres.render.com/somnoaisql_wkzi',
         conn_max_age=600
     )
-    
 }
+
 
 
 # Password validation
