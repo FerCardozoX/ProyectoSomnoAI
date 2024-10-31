@@ -1,4 +1,6 @@
+from datetime import timezone
 import json
+from random import randint, uniform
 import uuid
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
@@ -9,7 +11,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view
 from django.conf import settings
-from SomnoAIApp.models import Usuario, Observaciones, Estadisticas, Informe
+from SomnoAIApp.models import Usuarios, Observaciones, Estadisticas, Informes
 from config.gmail_service import send_email
 import google.generativeai as genai
 from .IA.Testeo import main as ejecutar_testeo
@@ -19,14 +21,14 @@ from .IA.TesteoAudio import main as ejecutar_audio
 @csrf_exempt
 @api_view(['GET'])
 def getUsuarios(request):
-    usuarios = Usuario.objects.all().values()
+    usuarios = Usuarios.objects.all().values()
     return JsonResponse(list(usuarios), status=200, safe=False)
 
 # Obtener un usuario por usuario_id
 @csrf_exempt
 @api_view(['GET'])
 def get_usuario(request, usuario_id):
-    usuario = Usuario.objects.filter(usuario_id=usuario_id).values()
+    usuario = Usuarios.objects.filter(usuario_id=usuario_id).values()
     return JsonResponse(list(usuario), status=200, safe=False)
 
 # Crear un usuario
@@ -47,10 +49,10 @@ def postCrearUsuario(request):
     if not all([username, email, password, nombre, apellido, fecha_nacimiento, genero, altura, peso]):
         return JsonResponse({"error": "Campos vacíos"}, status=400)
 
-    if Usuario.objects.filter(email=email).exists():
+    if Usuarios.objects.filter(email=email).exists():
         return JsonResponse({"error": "El usuario ya existe"}, status=400)
 
-    usuario = Usuario(
+    usuario = Usuarios(
         nombre=nombre,
         apellido=apellido,
         username=username,
@@ -71,8 +73,8 @@ def postCrearUsuario(request):
 @api_view(['PUT'])
 def putEditarUsuario(request, usuario_id):
     try:
-        usuario = Usuario.objects.get(usuario_id=usuario_id)
-    except Usuario.DoesNotExist:
+        usuario = Usuarios.objects.get(usuario_id=usuario_id)
+    except Usuarios.DoesNotExist:
         return JsonResponse({"error": "Usuario no encontrado"}, status=404)
 
     usuario.username = request.data.get('username', usuario.username)
@@ -91,8 +93,8 @@ def putEditarUsuario(request, usuario_id):
 @api_view(['DELETE'])
 def deleteEliminarUsuario(request, usuario_id):
     try:
-        usuario = Usuario.objects.get(usuario_id=usuario_id)
-    except Usuario.DoesNotExist:
+        usuario = Usuarios.objects.get(usuario_id=usuario_id)
+    except Usuarios.DoesNotExist:
         return JsonResponse({"error": "Usuario no encontrado"}, status=404)
 
     usuario.delete()
@@ -110,12 +112,12 @@ def iniciar_sesion(request):
         return JsonResponse({"error": "Username y contraseña son requeridos."}, status=400)
 
     try:
-        usuario = Usuario.objects.get(username=username)
+        usuario = Usuarios.objects.get(username=username)
         if usuario.verificar_password(password):
             return JsonResponse({"message": "Inicio de sesión exitoso."}, status=200)
         else:
             return JsonResponse({"error": "Username o contraseña incorrectos."}, status=401)
-    except Usuario.DoesNotExist:
+    except Usuarios.DoesNotExist:
         return JsonResponse({"error": "Usuario no encontrado."}, status=404)
 
 # Generación de respuestas con Gemini
@@ -202,7 +204,6 @@ def registrar_sueno(request):
     respiracion = request.data.get('respiracion')
     presion_arterial = request.data.get('presion_arterial')
 
-    # Registrar la información en Estadísticas mientras el usuario duerme
     Estadisticas.objects.create(
         usuario_id=usuario_id,
         frecuencia_cardiaca=frecuencia_cardiaca,
@@ -211,7 +212,44 @@ def registrar_sueno(request):
         ronquidos=ronquidos,
         respiracion=respiracion,
         presion_arterial=presion_arterial,
-
     )
 
     return JsonResponse({"message": "Datos de sueño registrados exitosamente"}, status=201)
+
+@csrf_exempt
+@api_view(['POST'])
+def CargarBase(request):
+    usuarios = Usuarios.objects.all()
+    fecha_actual = timezone.now()
+
+    for usuario in usuarios:
+        for dia in range(10):
+            fecha = fecha_actual - timezone.timedelta(days=dia)
+            tiene_apnea = usuario.id in [1, 2]  
+            
+            informe = Informes.objects.create(
+                usuario=usuario,
+                fecha=fecha,
+                contenido_informe="Apnea detectada" if tiene_apnea else "Sueño dentro de parámetros normales con pequeñas mejoras sugeridas."
+            )
+            
+            horas_sueño = randint(5, 9)
+            for _ in range(5):
+                hora_medicion = fecha + timezone.timedelta(hours=randint(0, horas_sueño))
+                frecuencia_cardiaca = randint(80, 110) if tiene_apnea else randint(60, 90)
+                saturacion_oxigeno = randint(85, 95) if tiene_apnea else randint(95, 100)
+                movimientos = randint(10, 30) if tiene_apnea else randint(5, 15)
+                respiracion = uniform(12.0, 20.0) if not tiene_apnea else uniform(10.0, 14.0)
+                presion_arterial = randint(140, 160) if tiene_apnea else randint(110, 130)
+
+                Estadisticas.objects.create(
+                    usuario=usuario,
+                    fecha=hora_medicion,
+                    frecuencia_cardiaca=frecuencia_cardiaca,
+                    saturacion_oxigeno=saturacion_oxigeno,
+                    movimientos=movimientos,
+                    respiracion=respiracion,
+                    presion_arterial=presion_arterial
+                )
+
+    return JsonResponse({'status': 'Datos generados correctamente'})

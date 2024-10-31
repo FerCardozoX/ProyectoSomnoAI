@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.hashers import make_password, check_password
 
 # Modelo de Usuario
-class Usuario(models.Model):
+class Usuarios(models.Model):
     usuario_id = models.AutoField(primary_key=True)  # Campo incremental y único
     nombre = models.CharField(max_length=150)
     apellido = models.CharField(max_length=150)
@@ -25,7 +25,7 @@ class Usuario(models.Model):
     def save(self, *args, **kwargs):
         if not self.pk:
             self.password = make_password(self.password)
-        super(Usuario, self).save(*args, **kwargs)
+        super(Usuarios, self).save(*args, **kwargs)
 
     def verificar_password(self, password):
         return check_password(password, self.password)
@@ -41,7 +41,7 @@ class Usuario(models.Model):
 
 # Modelo de Estadisticas
 class Estadisticas(models.Model):
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, to_field='usuario_id')
+    usuario = models.ForeignKey(Usuarios, on_delete=models.CASCADE, to_field='usuario_id')
     fecha = models.DateField(auto_now_add=True)
     frecuencia_cardiaca = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     saturacion_oxigeno = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
@@ -57,9 +57,10 @@ class Estadisticas(models.Model):
     def __str__(self):
         return f"Estadísticas del {self.fecha} para {self.usuario.username}"
 
+
 # Modelo de Observaciones
 class Observaciones(models.Model):
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, to_field='usuario_id')
+    usuario = models.ForeignKey(Usuarios, on_delete=models.CASCADE, to_field='usuario_id')
     fecha = models.DateField(auto_now_add=True)
     puntaje_sueno = models.DecimalField(max_digits=5, decimal_places=2)  # Puntaje de sueño
     observacion = models.TextField()
@@ -81,8 +82,8 @@ class Observaciones(models.Model):
 
 
 # Modelo de Informe
-class Informe(models.Model):
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, to_field='usuario_id')
+class Informes(models.Model):
+    usuario = models.ForeignKey(Usuarios, on_delete=models.CASCADE, to_field='usuario_id')
     fecha = models.DateField(auto_now_add=True)
     contenido_informe = models.TextField()
 
@@ -92,5 +93,3 @@ class Informe(models.Model):
 
     def __str__(self):
         return f"Informe del {self.fecha} para {self.usuario.username}"
-    
-

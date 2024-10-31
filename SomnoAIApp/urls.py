@@ -8,4 +8,5 @@ urlpatterns = [
     path('geminiChat/',gemini_chat, name='gemini_chat'),
     path('predecirApnea/', predecir, name='predecir_apnea'),
     path('predecirAudio/', predecirAudio, name='predecir_audio'),
+    path('CargarBase/', CargarBase, name='CargarBase'),
 ]
