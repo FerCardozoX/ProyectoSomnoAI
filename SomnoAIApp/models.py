@@ -3,6 +3,7 @@ from django.contrib.auth.hashers import make_password, check_password
 
 # Modelo de Usuario
 class Usuario(models.Model):
+    usuario_id = models.AutoField(primary_key=True)  # Campo incremental y único
     nombre = models.CharField(max_length=150)
     apellido = models.CharField(max_length=150)
     username = models.CharField(max_length=150, unique=True)
@@ -34,50 +35,62 @@ class Usuario(models.Model):
             return self.peso / (self.altura ** 2)
         return None
 
-# Modelo de Sueño
-class Sueno(models.Model):
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
-    fecha = models.DateField()
-    horas_dormidas = models.DecimalField(max_digits=4, decimal_places=2)
-    calidad_sueno = models.IntegerField()  # Valoración del 1 al 10
-    movimientos_dormir = models.IntegerField()  # Cantidad de movimientos registrados
-    pulsaciones_promedio = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    apneas = models.IntegerField(null=True, blank=True)
+    def __str__(self):
+        return f"{self.nombre} {self.apellido} ({self.username})"
 
-# Modelo de Estadística
-class Estadistica(models.Model):
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
-    fecha = models.DateField()
-    promedio_calidad_sueno = models.DecimalField(max_digits=4, decimal_places=2)
-    promedio_horas_dormidas = models.DecimalField(max_digits=4, decimal_places=2)
-    promedio_apneas = models.DecimalField(max_digits=5, decimal_places=2)
-    promedio_movimientos_dormir = models.DecimalField(max_digits=5, decimal_places=2)
 
-# Modelo de Contacto
-class Contacto(models.Model):
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
-    centro_salud = models.CharField(max_length=255)
-    fecha_contacto = models.DateField()
-    mensaje = models.TextField()
+# Modelo de Estadisticas
+class Estadisticas(models.Model):
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, to_field='usuario_id')
+    fecha = models.DateField(auto_now_add=True)
+    frecuencia_cardiaca = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    saturacion_oxigeno = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    movimientos = models.IntegerField(null=True, blank=True)
+    ronquidos = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    respiracion = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    presion_arterial = models.CharField(max_length=15, null=True, blank=True)
 
-# Modelo de Centro de Salud
-class CentroSalud(models.Model):
-    nombre = models.CharField(max_length=255)
-    direccion = models.CharField(max_length=255)
-    telefono = models.CharField(max_length=20, null=True, blank=True)
-    email = models.EmailField(null=True, blank=True)
-    latitud = models.DecimalField(max_digits=9, decimal_places=6)
-    longitud = models.DecimalField(max_digits=9, decimal_places=6)
+    class Meta:
+        verbose_name = "Estadística"
+        verbose_name_plural = "Estadísticas"
 
-# Modelo de Perfil
-class Perfil(models.Model):
-    usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE)
-    bio = models.TextField(null=True, blank=True)
-    foto_perfil = models.ImageField(upload_to='perfiles/', null=True, blank=True)
+    def __str__(self):
+        return f"Estadísticas del {self.fecha} para {self.usuario.username}"
 
-# Historial del Chat
-class HistorialChat(models.Model):
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
-    pregunta = models.TextField()  # Pregunta hecha por el usuario
-    respuesta = models.TextField()  # Respuesta de Gemini
-    fecha = models.DateTimeField(auto_now_add=True)
+# Modelo de Observaciones
+class Observaciones(models.Model):
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, to_field='usuario_id')
+    fecha = models.DateField(auto_now_add=True)
+    puntaje_sueno = models.DecimalField(max_digits=5, decimal_places=2)  # Puntaje de sueño
+    observacion = models.TextField()
+    apnea_porcentaje = models.IntegerField(null=True, blank=True)
+    resultado_apnea = models.CharField(max_length=255, null=True, blank=True)  # "Positivo para apnea del sueño" o "Negativo"
+    promedio_oxigeno = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    evaluacion_oxigeno = models.CharField(max_length=255, null=True, blank=True)  
+    promedio_heart_rate = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    evaluacion_heart_rate = models.CharField(max_length=255, null=True, blank=True)  
+    promedio_breathing = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    evaluacion_breathing = models.CharField(max_length=255, null=True, blank=True)  #
+
+    class Meta:
+        verbose_name = "Observación"
+        verbose_name_plural = "Observaciones"
+
+    def __str__(self):
+        return f"Observación del {self.fecha} para {self.usuario.username}"
+
+
+# Modelo de Informe
+class Informe(models.Model):
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, to_field='usuario_id')
+    fecha = models.DateField(auto_now_add=True)
+    contenido_informe = models.TextField()
+
+    class Meta:
+        verbose_name = "Informe"
+        verbose_name_plural = "Informes"
+
+    def __str__(self):
+        return f"Informe del {self.fecha} para {self.usuario.username}"
+    
+

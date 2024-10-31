@@ -1,6 +1,5 @@
 import json
-import random
-import string
+import uuid
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth.tokens import default_token_generator
@@ -8,16 +7,13 @@ from django.core.mail import send_mail
 from django.contrib.auth import authenticate, login
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-import requests
 from rest_framework.decorators import api_view
 from django.conf import settings
-import uuid
-from SomnoAIApp.models import Usuario
+from SomnoAIApp.models import Usuario, Observaciones, Estadisticas, Informe
 from config.gmail_service import send_email
 import google.generativeai as genai
 from .IA.Testeo import main as ejecutar_testeo
 from .IA.TesteoAudio import main as ejecutar_audio
-
 
 # Obtener todos los usuarios
 @csrf_exempt
@@ -25,6 +21,13 @@ from .IA.TesteoAudio import main as ejecutar_audio
 def getUsuarios(request):
     usuarios = Usuario.objects.all().values()
     return JsonResponse(list(usuarios), status=200, safe=False)
+
+# Obtener un usuario por usuario_id
+@csrf_exempt
+@api_view(['GET'])
+def get_usuario(request, usuario_id):
+    usuario = Usuario.objects.filter(usuario_id=usuario_id).values()
+    return JsonResponse(list(usuario), status=200, safe=False)
 
 # Crear un usuario
 @csrf_exempt
@@ -39,7 +42,7 @@ def postCrearUsuario(request):
     genero = request.data.get('genero') 
     altura = request.data.get('altura')
     peso = request.data.get('peso')
-    obra_social = request.data.get('condiciones_medicas')
+    obra_social = request.data.get('obra_social')
 
     if not all([username, email, password, nombre, apellido, fecha_nacimiento, genero, altura, peso]):
         return JsonResponse({"error": "Campos vacíos"}, status=400)
@@ -47,10 +50,9 @@ def postCrearUsuario(request):
     if Usuario.objects.filter(email=email).exists():
         return JsonResponse({"error": "El usuario ya existe"}, status=400)
 
-    token = uuid.uuid4().hex
     usuario = Usuario(
-        nombre = nombre,
-        apellido = apellido,
+        nombre=nombre,
+        apellido=apellido,
         username=username,
         email=email,
         password=password,
@@ -62,44 +64,24 @@ def postCrearUsuario(request):
     )
     usuario.save()
 
-    #verification_link = request.build_absolute_uri(f'/verificar-email/{token}/')
-    #send_mail(
-     #   'Verifica tu correo electrónico',
-      #  f'Por favor, verifica tu correo electrónico visitando el siguiente enlace: {verification_link}',
-       # settings.EMAIL_HOST_USER,
-       # [email],
-       # fail_silently=False,
-    #)
-
     return JsonResponse({"message": "Usuario creado con éxito. Por favor, verifica tu correo electrónico."}, status=201)
 
 # Editar un usuario
 @csrf_exempt
 @api_view(['PUT'])
-def putEditarUsuario(request, user_id):
+def putEditarUsuario(request, usuario_id):
     try:
-        usuario = Usuario.objects.get(id=user_id)
+        usuario = Usuario.objects.get(usuario_id=usuario_id)
     except Usuario.DoesNotExist:
         return JsonResponse({"error": "Usuario no encontrado"}, status=404)
 
-    username = request.data.get('username')
-    email = request.data.get('email')
-    fecha_nacimiento = request.data.get('fecha_nacimiento')
-    genero = request.data.get('genero')
-    altura = request.data.get('altura')
-    peso = request.data.get('peso')
-    condiciones_medicas = request.data.get('condiciones_medicas')
-
-    if not username:
-        return JsonResponse({"error": "Campo 'username' es requerido"}, status=400)
-
-    usuario.username = username
-    usuario.email = email
-    usuario.fecha_nacimiento = fecha_nacimiento
-    usuario.genero = genero
-    usuario.altura = altura
-    usuario.peso = peso
-    usuario.condiciones_medicas = condiciones_medicas
+    usuario.username = request.data.get('username', usuario.username)
+    usuario.email = request.data.get('email', usuario.email)
+    usuario.fecha_nacimiento = request.data.get('fecha_nacimiento', usuario.fecha_nacimiento)
+    usuario.genero = request.data.get('genero', usuario.genero)
+    usuario.altura = request.data.get('altura', usuario.altura)
+    usuario.peso = request.data.get('peso', usuario.peso)
+    usuario.obra_social = request.data.get('obra_social', usuario.obra_social)
     usuario.save()
 
     return JsonResponse({"message": "Usuario actualizado con éxito"}, status=200)
@@ -107,35 +89,15 @@ def putEditarUsuario(request, user_id):
 # Eliminar un usuario
 @csrf_exempt
 @api_view(['DELETE'])
-def deleteEliminarUsuario(request, user_id):
+def deleteEliminarUsuario(request, usuario_id):
     try:
-        usuario = Usuario.objects.get(id=user_id)
+        usuario = Usuario.objects.get(usuario_id=usuario_id)
     except Usuario.DoesNotExist:
         return JsonResponse({"error": "Usuario no encontrado"}, status=404)
 
     usuario.delete()
 
     return JsonResponse({"message": "Usuario eliminado con éxito"}, status=204)
-
-# Listar todos los usuarios
-@csrf_exempt
-@api_view(['GET'])
-def getListarUsuarios(request):
-    usuarios = Usuario.objects.all().values()
-    return JsonResponse({"usuarios": list(usuarios)}, safe=False, status=200)
-
-# Verificar el correo electrónico
-@csrf_exempt
-@api_view(['GET'])
-def getVerificarEmail(request, token):
-    try:
-        usuario = Usuario.objects.get(token_verificacion=token)
-        usuario.email_verificado = True
-        usuario.token_verificacion = ''
-        usuario.save()
-        return JsonResponse({"message": "Correo electrónico verificado exitosamente."}, status=200)
-    except Usuario.DoesNotExist:
-        return JsonResponse({"error": "Token de verificación inválido."}, status=400)
 
 # Iniciar sesión
 @csrf_exempt
@@ -150,188 +112,37 @@ def iniciar_sesion(request):
     try:
         usuario = Usuario.objects.get(username=username)
         if usuario.verificar_password(password):
-            # Aquí puedes manejar la sesión si usas Django con sesiones.
             return JsonResponse({"message": "Inicio de sesión exitoso."}, status=200)
         else:
             return JsonResponse({"error": "Username o contraseña incorrectos."}, status=401)
     except Usuario.DoesNotExist:
         return JsonResponse({"error": "Usuario no encontrado."}, status=404)
 
-# Solicitar cambio de contraseña
-@csrf_exempt
-@api_view(['POST'])
-def solicitar_cambio_contraseña(request):
-    email = request.data.get('email')
-
-    if not email:
-        return JsonResponse({"error": "Correo electrónico requerido."}, status=400)
-
-    try:
-        usuario = Usuario.objects.get(email=email)
-    except Usuario.DoesNotExist:
-        return JsonResponse({"error": "Usuario no encontrado."}, status=404)
-
-    token = default_token_generator.make_token(usuario)
-    uid = urlsafe_base64_encode(force_bytes(usuario.pk))
-
-    # Enviar correo electrónico con el token
-    send_mail(
-        'Restablecimiento de contraseña',
-        f'Usa este token para restablecer tu contraseña: {token}',
-        settings.EMAIL_HOST_USER,
-        [email],
-        fail_silently=False,
-    )
-
-    return JsonResponse({"message": "Correo enviado con éxito.", "uid": uid, "token": token}, status=200)
-
-# Verificar token
-@csrf_exempt
-@api_view(['POST'])
-def verificar_token(request):
-    uidb64 = request.data.get('uid')
-    token = request.data.get('token')
-
-    try:
-        uid = force_str(urlsafe_base64_decode(uidb64))
-        usuario = Usuario.objects.get(pk=uid)
-    except (TypeError, ValueError, OverflowError, Usuario.DoesNotExist):
-        return JsonResponse({"error": "Token inválido o usuario no encontrado."}, status=400)
-
-    if default_token_generator.check_token(usuario, token):
-        return JsonResponse({"message": "Token válido."}, status=200)
-    else:
-        return JsonResponse({"error": "Token inválido."}, status=400)
-
-# Cambiar contraseña
-@csrf_exempt
-@api_view(['POST'])
-def cambiar_contraseña(request):
-    uidb64 = request.data.get('uid')
-    token = request.data.get('token')
-    nueva_contraseña = request.data.get('nueva_contraseña')
-
-    if not nueva_contraseña:
-        return JsonResponse({"error": "Nueva contraseña requerida."}, status=400)
-
-    try:
-        uid = force_str(urlsafe_base64_decode(uidb64))
-        usuario = Usuario.objects.get(pk=uid)
-    except (TypeError, ValueError, OverflowError, Usuario.DoesNotExist):
-        return JsonResponse({"error": "Usuario no encontrado."}, status=404)
-
-    if default_token_generator.check_token(usuario, token):
-        usuario.set_password(nueva_contraseña)
-        usuario.save()
-        return JsonResponse({"message": "Contraseña actualizada con éxito."}, status=200)
-    else:
-        return JsonResponse({"error": "Token inválido."}, status=400)
-    
-
-
-@csrf_exempt
-@api_view(['POST'])
-def enviarCodigoVerificacion(request):
-    email = request.data.get('email')
-
-    if not email:
-        return JsonResponse({"error": "El campo de correo electrónico es obligatorio."}, status=400)
-
-    # Generar un código de verificación aleatorio de 6 dígitos
-    codigo_verificacion = ''.join(random.choices(string.digits, k=6))
-
-    # Guardar el código en una variable de sesión
-    request.session['codigo_verificacion'] = codigo_verificacion
-
-    # Enviar el correo con el código de verificación
-    email_body = f'Tu código de verificación es: {codigo_verificacion}'
-    try:
-        send_email(email, 'Código de Verificación', email_body)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
-
-    return JsonResponse({"message": "Código de verificación enviado. Por favor, verifica tu correo."}, status=200)
-
-@csrf_exempt
-@api_view(['POST'])
-def verificarCodigoYCrearUsuario(request):
-    codigo_ingresado = request.data.get('codigo')
-    codigo_verificacion = request.session.get('codigo_verificacion')
-
-    if not codigo_ingresado or not codigo_verificacion:
-        return JsonResponse({"error": "Código de verificación no encontrado o no ingresado."}, status=400)
-
-    if codigo_ingresado == codigo_verificacion:
-        # Aquí tomas los demás datos y creas el usuario
-        nombre = request.data.get('nombre')
-        apellido = request.data.get('apellido')
-        username = request.data.get('username')
-        email = request.data.get('email')
-        password = request.data.get('password')
-        fecha_nacimiento = request.data.get('fecha_nacimiento')
-        genero = request.data.get('genero')
-        altura = request.data.get('altura')
-        peso = request.data.get('peso')
-        obra_social = request.data.get('obra_social')
-
-        usuario = Usuario(
-            nombre=nombre,
-            apellido=apellido,
-            username=username,
-            email=email,
-            password=password,
-            fecha_nacimiento=fecha_nacimiento,
-            genero=genero,
-            altura=altura,
-            peso=peso,
-            obra_social=obra_social
-        )
-        usuario.save()
-
-        # Limpiar el código de la sesión
-        del request.session['codigo_verificacion']
-
-        return JsonResponse({"message": "Usuario creado con éxito."}, status=201)
-    else:
-        return JsonResponse({"error": "Código de verificación incorrecto."}, status=400)
-
-
-# Configurar la clave de API directamente en el código para la prueba
-genai.configure(api_key="AIzaSyDYlbzeahQKhqf4tStEugOnObjaaOsT-0Y")
+# Generación de respuestas con Gemini
+genai.configure(api_key="your_api_key")
 
 @csrf_exempt
 def gemini_chat(request):
     if request.method == 'POST':
-        # Obtener el mensaje enviado por el usuario
         data = json.loads(request.body)
         question = data.get('question')
-        parametros = data.get('parametros', {})
-
+        
         try:
-            # Crear el modelo de generación de contenido de Gemini
             model = genai.GenerativeModel("gemini-1.5-flash")
-            
-            # Realizar la generación de contenido basada en la pregunta del usuario
             response = model.generate_content(question)
-            
-            # Obtener el texto generado
             respuesta = response.text
-
             return JsonResponse({'answer': respuesta})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
+# Predecir datos
 @csrf_exempt
 @api_view(['POST'])
 def predecir(request):
-    # Aquí podés recibir algún dato del frontend si querés (opcional)
-    parametro_ejemplo = request.data.get('parametro', None)
-
-    # Ejecutar el método main() de testeo.py
     try:
-        resultados = ejecutar_testeo()  # Llamamos al método 'main' de testeo.py
+        resultados = ejecutar_testeo()
         return JsonResponse(resultados, status=200)
     except Exception as e:
         return JsonResponse({"error": f"Ocurrió un error al ejecutar el procesamiento: {str(e)}"}, status=500)
@@ -339,12 +150,68 @@ def predecir(request):
 @csrf_exempt
 @api_view(['POST'])
 def predecirAudio(request):
-    # Aquí podés recibir algún dato del frontend si querés (opcional)
-    parametro_ejemplo = request.data.get('parametro', None)
-
-    # Ejecutar el método main() de testeo.py
     try:
-        ResultadoAudio = ejecutar_audio()  # Llamamos al método 'main' de testeo.py
+        ResultadoAudio = ejecutar_audio()
         return JsonResponse(ResultadoAudio, status=200)
     except Exception as e:
         return JsonResponse({"error": f"Ocurrió un error al ejecutar el procesamiento: {str(e)}"}, status=500)
+
+# Obtener y crear estadísticas
+@csrf_exempt
+@api_view(['GET'])
+def get_estadisticas(request, usuario_id):
+    estadisticas = Estadisticas.objects.filter(usuario_id=usuario_id).values()
+    return JsonResponse(list(estadisticas), status=200, safe=False)
+
+@csrf_exempt
+@api_view(['POST'])
+def post_estadisticas(request):
+    usuario_id = request.data.get('usuario_id')
+    frecuencia_cardiaca = request.data.get('frecuencia_cardiaca')
+    saturacion_oxigeno = request.data.get('saturacion_oxigeno')
+    movimientos = request.data.get('movimientos')
+    ronquidos = request.data.get('ronquidos')
+    respiracion = request.data.get('respiracion')
+    presion_arterial = request.data.get('presion_arterial')
+    apneas = request.data.get('apneas')
+    
+    if not usuario_id:
+        return JsonResponse({"error": "Usuario ID es requerido"}, status=400)
+
+    Estadisticas.objects.create(
+        usuario_id=usuario_id,
+        frecuencia_cardiaca=frecuencia_cardiaca,
+        saturacion_oxigeno=saturacion_oxigeno,
+        movimientos=movimientos,
+        ronquidos=ronquidos,
+        respiracion=respiracion,
+        presion_arterial=presion_arterial,
+        apneas=apneas
+    )
+    return JsonResponse({"message": "Estadística creada con éxito"}, status=201)
+
+
+@csrf_exempt
+@api_view(['POST'])
+def registrar_sueno(request):
+    usuario_id = request.data.get('usuario_id')
+    frecuencia_cardiaca = request.data.get('frecuencia_cardiaca')
+    saturacion_oxigeno = request.data.get('saturacion_oxigeno')
+    movimientos = request.data.get('movimientos')
+    ronquidos = request.data.get('ronquidos')
+    respiracion = request.data.get('respiracion')
+    presion_arterial = request.data.get('presion_arterial')
+
+    # Registrar la información en Estadísticas mientras el usuario duerme
+    Estadisticas.objects.create(
+        usuario_id=usuario_id,
+        frecuencia_cardiaca=frecuencia_cardiaca,
+        saturacion_oxigeno=saturacion_oxigeno,
+        movimientos=movimientos,
+        ronquidos=ronquidos,
+        respiracion=respiracion,
+        presion_arterial=presion_arterial,
+
+    )
+
+    return JsonResponse({"message": "Datos de sueño registrados exitosamente"}, status=201)
