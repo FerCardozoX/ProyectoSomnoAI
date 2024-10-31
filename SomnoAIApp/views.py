@@ -1,4 +1,6 @@
-from datetime import timezone
+import datetime
+from datetime import datetime, timedelta
+from django.utils import timezone
 import json
 from random import randint, uniform
 import uuid
@@ -220,28 +222,31 @@ def registrar_sueno(request):
 @api_view(['POST'])
 def CargarBase(request):
     usuarios = Usuarios.objects.all()
-    fecha_actual = timezone.now()
-
+    
+    # Rango de fechas del 21 al 31 de octubre
     for usuario in usuarios:
-        for dia in range(10):
-            fecha = fecha_actual - timezone.timedelta(days=dia)
-            tiene_apnea = usuario.id in [1, 2]  
-            
+        for dia in range(21, 32):  # Días del 21 al 31 de octubre
+            fecha_noche = datetime(2024, 10, dia)
+            tiene_apnea = usuario.usuario_id in [4, 2]  # Identificar si el usuario tiene apnea
+
+            # Crear un informe diario
             informe = Informes.objects.create(
                 usuario=usuario,
-                fecha=fecha,
+                fecha=fecha_noche.date(),
                 contenido_informe="Apnea detectada" if tiene_apnea else "Sueño dentro de parámetros normales con pequeñas mejoras sugeridas."
             )
-            
-            horas_sueño = randint(5, 9)
-            for _ in range(5):
-                hora_medicion = fecha + timezone.timedelta(hours=randint(0, horas_sueño))
+
+            # Crear exactamente 5 mediciones en intervalos dentro de la noche
+            horas_medicion = [22, 23, 0, 1, 2]  # Horas fijas para cada medición
+            for hora in horas_medicion:
+                hora_medicion = fecha_noche.replace(hour=hora, minute=0)
                 frecuencia_cardiaca = randint(80, 110) if tiene_apnea else randint(60, 90)
                 saturacion_oxigeno = randint(85, 95) if tiene_apnea else randint(95, 100)
                 movimientos = randint(10, 30) if tiene_apnea else randint(5, 15)
                 respiracion = uniform(12.0, 20.0) if not tiene_apnea else uniform(10.0, 14.0)
                 presion_arterial = randint(140, 160) if tiene_apnea else randint(110, 130)
 
+                # Crear el registro en Estadísticas
                 Estadisticas.objects.create(
                     usuario=usuario,
                     fecha=hora_medicion,
