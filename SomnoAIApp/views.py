@@ -218,43 +218,56 @@ def registrar_sueno(request):
 
     return JsonResponse({"message": "Datos de sueño registrados exitosamente"}, status=201)
 
+# Configurar la clave de API directamente en el código para la prueba
+genai.configure(api_key="AIzaSyDYlbzeahQKhqf4tStEugOnObjaaOsT-0Y")
+
+@csrf_exempt
+def gemini_chat(request):
+    if request.method == 'POST':
+        # Obtener el mensaje enviado por el usuario
+        data = json.loads(request.body)
+        question = data.get('question')
+        parametros = data.get('parametros', {})
+
+        try:
+            # Crear el modelo de generación de contenido de Gemini
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            
+            # Realizar la generación de contenido basada en la pregunta del usuario
+            response = model.generate_content(question)
+            
+            # Obtener el texto generado
+            respuesta = response.text
+
+            return JsonResponse({'answer': respuesta})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 @csrf_exempt
 @api_view(['POST'])
-def CargarBase(request):
-    usuarios = Usuarios.objects.all()
-    
-    # Rango de fechas del 21 al 31 de octubre
-    for usuario in usuarios:
-        for dia in range(21, 32):  # Días del 21 al 31 de octubre
-            fecha_noche = datetime(2024, 10, dia)
-            tiene_apnea = usuario.usuario_id in [4, 2]  # Identificar si el usuario tiene apnea
+def predecir(request):
 
-            # Crear un informe diario
-            informe = Informes.objects.create(
-                usuario=usuario,
-                fecha=fecha_noche.date(),
-                contenido_informe="Apnea detectada" if tiene_apnea else "Sueño dentro de parámetros normales con pequeñas mejoras sugeridas."
-            )
+    parametro_ejemplo = request.data.get('parametro', None)
 
-            # Crear exactamente 5 mediciones en intervalos dentro de la noche
-            horas_medicion = [22, 23, 0, 1, 2]  # Horas fijas para cada medición
-            for hora in horas_medicion:
-                hora_medicion = fecha_noche.replace(hour=hora, minute=0)
-                frecuencia_cardiaca = randint(80, 110) if tiene_apnea else randint(60, 90)
-                saturacion_oxigeno = randint(85, 95) if tiene_apnea else randint(95, 100)
-                movimientos = randint(10, 30) if tiene_apnea else randint(5, 15)
-                respiracion = uniform(12.0, 20.0) if not tiene_apnea else uniform(10.0, 14.0)
-                presion_arterial = randint(140, 160) if tiene_apnea else randint(110, 130)
+    # Ejecutar el método main() de testeo.py
+    try:
+        resultados = ejecutar_testeo()  # Llamamos al método 'main' de testeo.py
+        return JsonResponse(resultados, status=200)
+    except Exception as e:
+        return JsonResponse({"error": f"Ocurrió un error al ejecutar el procesamiento: {str(e)}"}, status=500)
 
-                # Crear el registro en Estadísticas
-                Estadisticas.objects.create(
-                    usuario=usuario,
-                    fecha=hora_medicion,
-                    frecuencia_cardiaca=frecuencia_cardiaca,
-                    saturacion_oxigeno=saturacion_oxigeno,
-                    movimientos=movimientos,
-                    respiracion=respiracion,
-                    presion_arterial=presion_arterial
-                )
+@csrf_exempt
+@api_view(['POST'])
+def predecirAudio(request):
 
-    return JsonResponse({'status': 'Datos generados correctamente'})
+    parametro_ejemplo = request.data.get('parametro', None)
+
+    # Ejecutar el método main() de testeo.py
+    try:
+        ResultadoAudio = ejecutar_audio()  # Llamamos al método 'main' de testeo.py
+        return JsonResponse(ResultadoAudio, status=200)
+    except Exception as e:
+        return JsonResponse({"error": f"Ocurrió un error al ejecutar el procesamiento: {str(e)}"}, status=500)
+
